@@ -1,0 +1,12 @@
+PEDINDO O QUE A IA ENTENDE:
+
+Não sobre números específicos e sim
+Padrões sobre a distribuição dos primeiros dígitos
+Padrões sobre a distribuição dos segundos dígitos
+
+USE A API para buscar dados históricos REAIS
+ANALISE estatisticamente esses dados da API
+CALCULE os padrões mais comuns baseado nos dados reais
+POPULE dinamicamente os checkboxes (crescente E sorteio)
+ZERO dados estáticos - só dados reais ou localStorage
+
