@@ -319,9 +319,11 @@
                         </h4>
                         <p class="text-blue-700 text-sm mb-2">
                             1. Cole os números que <strong>NÃO SAÍRAM</strong> no último concurso<br>
-                            2. Escolha o padrão a ser usado (baseado nos mais comuns da história do Dia de Sorte)<br>
+                            2. Escolha o tipo de distribuição:<br>
+                            &nbsp;&nbsp;&nbsp;• <strong>🎯 Manual:</strong> Você escolhe 1 padrão específico para todos os jogos<br>
+                            &nbsp;&nbsp;&nbsp;• <strong>🎲 Aleatória/⚖️ Uniforme/📊 Ponderada:</strong> Sistema usa automaticamente os 10 melhores padrões<br>
                             3. Configure quantidade de jogos e números por jogo<br>
-                            4. O sistema gerará jogos seguindo exclusivamente o padrão selecionado
+                            4. O sistema gerará jogos seguindo os padrões selecionados
                         </p>
                         <p class="text-xs text-blue-600">
                             <strong>Exemplo:</strong> 01, 02, 03, 04, 05, 08, 09, 10, 12, 13, 14, 16, 17, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30
@@ -382,13 +384,14 @@
                             </label>
                             <select id="tipoDistribuicao" onchange="updateDistribuicaoInfo()"
                                     class="w-full border border-dia-sorte-300 rounded-lg px-3 py-2 text-center font-bold bg-dia-sorte-50 focus:border-dia-sorte-500 focus:ring-2 focus:ring-dia-sorte-200"
-                                    title="🎲 Aleatória: Cada jogo sorteia 1 padrão aleatório | ⚖️ Uniforme: Divide jogos igualmente entre padrões | 📊 Ponderada: Mais jogos para padrões mais frequentes (1º=40%, 2º=25%, 3º=15%, etc.)">
+                                    title="🎯 Manual: Você escolhe 1 padrão específico | 🎲 Aleatória: Sistema sorteia padrões automaticamente | ⚖️ Uniforme: Sistema divide jogos entre padrões | 📊 Ponderada: Sistema prioriza padrões mais frequentes">
+                                <option value="manual">🎯 Manual</option>
                                 <option value="aleatoria">🎲 Aleatória</option>
                                 <option value="uniforme">⚖️ Uniforme</option>
                                 <option value="ponderada">📊 Ponderada</option>
                             </select>
                             <div id="infoDistribuicao" class="text-xs text-dia-sorte-600 mt-2">
-                                Sorteia 1 padrão por jogo
+                                Você escolhe 1 padrão específico
                             </div>
                             <!-- Explicação Detalhada da Distribuição Ponderada -->
                             <div id="explicacaoPonderada" class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 hidden">
@@ -2279,6 +2282,7 @@
         let jogosPadroes = [];
         let dadosHistoricoAPI = [];
         let analiseCompleta = null; // Para armazenar análise completa dos padrões
+        let padroesDisponiveis = []; // Para armazenar os 10 padrões mais comuns
         
         // =================== MODAL TODOS OS PADRÕES ===================
         
@@ -2631,6 +2635,11 @@
                 analiseCompleta = analisarPadroesEstatisticamente(dadosHistoricos, false); // false = não limitar
                 const analiseEstatistica = analisarPadroesEstatisticamente(dadosHistoricos, true); // true = limitar top 10
                 
+                // **SALVAR OS 10 PADRÕES MAIS COMUNS**
+                padroesDisponiveis = analiseEstatistica.padroesOrdenados.map(([padrao, freq]) => 
+                    analiseEstatistica.padroesCrescente[padrao]
+                );
+                
                 // Mostrar info do concurso atual
                 const concursoAtual = dadosAPI;
                 const dezenasAtuais = concursoAtual.listaDezenas.map(d => parseInt(d));
@@ -2903,47 +2912,67 @@
             investimentoDiv.textContent = formatarValor(total);
         }
         
-        // Nova função para atualizar informações de distribuição dinamicamente
+        // ✅ **NOVA FUNÇÃO PARA ATUALIZAR INFORMAÇÕES DE DISTRIBUIÇÃO DINAMICAMENTE**
         function updateDistribuicaoInfo() {
             const tipoDistribuicao = document.getElementById('tipoDistribuicao').value;
             const qtdJogos = parseInt(document.getElementById('quantidadeJogosPadroes').value) || 0;
-            const padroesSelecionados = document.querySelectorAll('input[name="padroesDigitos"]:checked').length;
             const infoDiv = document.getElementById('infoDistribuicao');
             const explicacaoPonderada = document.getElementById('explicacaoPonderada');
+            const padroesCheckboxes = document.querySelectorAll('input[name="padroesDigitos"]');
             
-            let infoTexto = '';
-            
-            switch (tipoDistribuicao) {
-                case 'uniforme':
-                    if (padroesSelecionados > 0 && qtdJogos > 0) {
-                        const jogosPorPadrao = Math.floor(qtdJogos / padroesSelecionados);
-                        const sobra = qtdJogos % padroesSelecionados;
-                        infoTexto = `${jogosPorPadrao} jogos por padrão`;
-                        if (sobra > 0) {
-                            infoTexto += ` (+${sobra} extras)`;
-                        }
-                    } else {
-                        infoTexto = 'Divide jogos igualmente';
-                    }
-                    explicacaoPonderada.classList.add('hidden');
-                    break;
-                    
-                case 'ponderada':
-                    if (padroesSelecionados > 0) {
-                        infoTexto = `Mais jogos para os ${Math.min(3, padroesSelecionados)} primeiros padrões`;
-                    } else {
-                        infoTexto = 'Mais jogos para os mais frequentes';
-                    }
-                    explicacaoPonderada.classList.remove('hidden');
-                    break;
-                    
-                default: // 'aleatoria'
-                    infoTexto = 'Sorteia 1 padrão por jogo';
-                    explicacaoPonderada.classList.add('hidden');
-                    break;
+            // **LÓGICA PRINCIPAL DE HABILITAÇÃO/DESABILITAÇÃO**
+            if (tipoDistribuicao === 'manual') {
+                // **MANUAL: HABILITAR interface para usuário escolher**
+                padroesCheckboxes.forEach(checkbox => {
+                    checkbox.disabled = false;
+                    checkbox.parentElement.style.opacity = '1.0';
+                    checkbox.parentElement.style.pointerEvents = 'auto';
+                });
+                
+                const padroesSelecionados = document.querySelectorAll('input[name="padroesDigitos"]:checked').length;
+                if (padroesSelecionados === 1) {
+                    infoDiv.textContent = `Todos os ${qtdJogos} jogos com o mesmo padrão`;
+                } else if (padroesSelecionados > 1) {
+                    infoDiv.textContent = `⚠️ Selecione apenas 1 padrão`;
+                } else {
+                    infoDiv.textContent = 'Você escolhe 1 padrão específico';
+                }
+                explicacaoPonderada.classList.add('hidden');
+                
+            } else {
+                // **OUTRAS DISTRIBUIÇÕES: DESABILITAR interface (fica cinza)**
+                padroesCheckboxes.forEach(checkbox => {
+                    checkbox.disabled = true;
+                    checkbox.parentElement.style.opacity = '0.5';
+                    checkbox.parentElement.style.pointerEvents = 'none';
+                });
+                
+                // **Automaticamente selecionar todos os padrões disponíveis**
+                if (padroesDisponiveis.length > 0) {
+                    padroesCheckboxes.forEach(checkbox => {
+                        checkbox.checked = true; // Marcar todos
+                    });
+                }
+                
+                switch (tipoDistribuicao) {
+                    case 'uniforme':
+                        infoDiv.textContent = 'Sistema divide jogos automaticamente entre os 10 padrões';
+                        explicacaoPonderada.classList.add('hidden');
+                        break;
+                        
+                    case 'ponderada':
+                        infoDiv.textContent = 'Sistema prioriza automaticamente os padrões mais frequentes';
+                        explicacaoPonderada.classList.remove('hidden');
+                        break;
+                        
+                    default: // 'aleatoria'
+                        infoDiv.textContent = 'Sistema sorteia automaticamente entre os 10 padrões';
+                        explicacaoPonderada.classList.add('hidden');
+                        break;
+                }
             }
             
-            infoDiv.textContent = infoTexto;
+            updatePadroesSelecionados();
         }
         
         function updatePadroesSelecionados() {
@@ -2953,8 +2982,6 @@
             const infoDiv = document.getElementById('padroesSelecionados');
             infoDiv.textContent = `${total} padrões selecionados`;
             
-            // Atualizar informação de distribuição também
-            updateDistribuicaoInfo();
             updateGerarBotaoPadroes();
             
             console.log(`📊 ${total} padrões selecionados, botão habilitado: ${total > 0 && numerosDisponiveis.length > 0}`);
@@ -2963,39 +2990,60 @@
         function updateGerarBotaoPadroes() {
             const botao = document.getElementById('gerarJogosPadroes');
             const temNumeros = numerosDisponiveis.length > 0;
-            const temPadroes = document.querySelectorAll('input[name="padroesDigitos"]:checked').length > 0;
+            const tipoDistribuicao = document.getElementById('tipoDistribuicao').value;
             
-            botao.disabled = !temNumeros || !temPadroes;
+            // **NOVA LÓGICA DE VALIDAÇÃO**
+            let botaoHabilitado = false;
+            let textoErro = '';
             
-            // Debug e mensagens claras
-            console.log(`🔍 DEBUG BOTÃO:`, {
-                numerosDisponiveis: numerosDisponiveis.length,
-                padroesEscolhidos: temPadroes,
-                botaoHabilitado: !botao.disabled
-            });
-            
-            // Atualizar texto do botão com informação útil
-            if (!temNumeros && !temPadroes) {
-                botao.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Cole os números E selecione padrões';
-            } else if (!temNumeros) {
-                botao.innerHTML = '<i class="fas fa-paste"></i> Cole os números que não saíram primeiro';
-            } else if (!temPadroes) {
-                botao.innerHTML = '<i class="fas fa-check-square"></i> Selecione pelo menos um padrão';
+            if (!temNumeros) {
+                textoErro = '<i class="fas fa-paste"></i> Cole os números que não saíram primeiro';
+            } else if (tipoDistribuicao === 'manual') {
+                const padroesSelecionados = document.querySelectorAll('input[name="padroesDigitos"]:checked').length;
+                if (padroesSelecionados === 0) {
+                    textoErro = '<i class="fas fa-check-square"></i> Selecione 1 padrão para distribuição Manual';
+                } else if (padroesSelecionados > 1) {
+                    textoErro = '<i class="fas fa-exclamation-triangle"></i> Distribuição Manual: selecione apenas 1 padrão';
+                } else {
+                    botaoHabilitado = true;
+                    textoErro = '<i class="fas fa-chart-pie"></i> Gerar Jogos por Padrões Reais';
+                }
             } else {
-                botao.innerHTML = '<i class="fas fa-chart-pie"></i> Gerar Jogos por Padrões Reais';
+                // **Outras distribuições: verificar se temos padrões disponíveis**
+                if (padroesDisponiveis.length === 0) {
+                    textoErro = '<i class="fas fa-sync-alt"></i> Execute "Analisar API Atual" primeiro';
+                } else {
+                    botaoHabilitado = true;
+                    textoErro = '<i class="fas fa-chart-pie"></i> Gerar Jogos por Padrões Reais';
+                }
             }
+            
+            botao.disabled = !botaoHabilitado;
+            botao.innerHTML = textoErro;
+            
+            console.log(`🔍 BOTÃO DEBUG:`, {
+                numerosDisponiveis: numerosDisponiveis.length,
+                tipoDistribuicao,
+                padroesSelecionados: document.querySelectorAll('input[name="padroesDigitos"]:checked').length,
+                padroesDisponiveis: padroesDisponiveis.length,
+                botaoHabilitado
+            });
         }
         
         function selecionarTodosPadroes() {
             document.querySelectorAll('input[name="padroesDigitos"]').forEach(checkbox => {
-                checkbox.checked = true;
+                if (!checkbox.disabled) { // Só selecionar se não estiver desabilitado
+                    checkbox.checked = true;
+                }
             });
             updatePadroesSelecionados();
         }
         
         function limparPadroes() {
             document.querySelectorAll('input[name="padroesDigitos"]').forEach(checkbox => {
-                checkbox.checked = false;
+                if (!checkbox.disabled) { // Só limpar se não estiver desabilitado
+                    checkbox.checked = false;
+                }
             });
             updatePadroesSelecionados();
         }
@@ -3006,26 +3054,40 @@
                 return;
             }
             
-            const padroesSelecionados = [
-                ...Array.from(document.querySelectorAll('input[name="padroesDigitos"]:checked')).map(cb => cb.value)
-            ];
-            
-            if (padroesSelecionados.length === 0) {
-                mostrarMensagem('error', '❌ Selecione pelo menos um padrão!');
-                return;
-            }
-            
+            const tipoDistribuicao = document.getElementById('tipoDistribuicao').value;
             const qtdJogos = parseInt(document.getElementById('quantidadeJogosPadroes').value);
             const numerosPorJogo = parseInt(document.getElementById('numerosPorJogoPadroes').value);
             const mesSorte = document.getElementById('mesSortePadroes').value;
-            const tipoDistribuicao = document.getElementById('tipoDistribuicao').value;
+            
+            let padroesSelecionados = [];
+            
+            if (tipoDistribuicao === 'manual') {
+                // **MANUAL: Usar apenas os padrões que o usuário selecionou**
+                padroesSelecionados = Array.from(document.querySelectorAll('input[name="padroesDigitos"]:checked')).map(cb => cb.value);
+                
+                if (padroesSelecionados.length !== 1) {
+                    mostrarMensagem('error', '❌ Para distribuição Manual, selecione exatamente 1 padrão!');
+                    return;
+                }
+            } else {
+                // **OUTRAS DISTRIBUIÇÕES: Usar automaticamente os 10 padrões mais comuns**
+                if (padroesDisponiveis.length === 0) {
+                    mostrarMensagem('error', '❌ Execute "Analisar API Atual" primeiro para carregar os padrões!');
+                    return;
+                }
+                padroesSelecionados = [...padroesDisponiveis]; // Usar todos os 10 padrões
+            }
             
             jogosPadroes = [];
             
             console.log(`🎲 Gerando ${qtdJogos} jogos usando distribuição: ${tipoDistribuicao}`);
+            console.log(`📊 Padrões a serem usados:`, padroesSelecionados.length);
             
             // Aplicar a lógica de distribuição escolhida
             switch (tipoDistribuicao) {
+                case 'manual':
+                    gerarJogosDistribuicaoManual(qtdJogos, padroesSelecionados, numerosPorJogo, mesSorte);
+                    break;
                 case 'uniforme':
                     gerarJogosDistribuicaoUniforme(qtdJogos, padroesSelecionados, numerosPorJogo, mesSorte);
                     break;
@@ -3039,6 +3101,30 @@
             
             exibirJogosPadroes();
             mostrarMensagem('success', `✅ ${qtdJogos} jogos gerados usando distribuição ${tipoDistribuicao}!`);
+        }
+        
+        // 🎯 DISTRIBUIÇÃO MANUAL: Usa apenas um padrão específico para todos os jogos
+        function gerarJogosDistribuicaoManual(qtdJogos, padroesSelecionados, numerosPorJogo, mesSorte) {
+            // Validar se há apenas um padrão selecionado
+            if (padroesSelecionados.length !== 1) {
+                mostrarMensagem('error', '❌ Para distribuição manual, selecione exatamente 1 padrão!');
+                return;
+            }
+            
+            const padraoEscolhido = padroesSelecionados[0];
+            console.log(`🎯 MANUAL: Usando padrão: ${padraoEscolhido}`);
+            
+            for (let i = 0; i < qtdJogos; i++) {
+                const jogoFinal = gerarJogoComPadrao(padraoEscolhido, numerosPorJogo, 'manual');
+                
+                jogosPadroes.push({
+                    jogo: i + 1,
+                    numeros: jogoFinal,
+                    padrao: padraoEscolhido,
+                    tipoDistribuicao: '🎯 Manual (mesmo padrão)',
+                    mesSorte: mesSorte || gerarMesAleatorio()
+                });
+            }
         }
         
         // 🎲 DISTRIBUIÇÃO ALEATÓRIA: Cada jogo sorteia um padrão
@@ -3129,14 +3215,18 @@
             }
         }
         
-        // Função auxiliar para gerar um jogo com base em um padrão específico
-        function gerarJogoComPadrao(padraoEscolhido, numerosPorJogo) {
+        // ✅ **FUNÇÃO CORRIGIDA PARA GERAR JOGO COM PADRÃO**
+        function gerarJogoComPadrao(padraoEscolhido, numerosPorJogo, tipoDistribuicao = 'aleatoria') {
+            console.log(`🎯 Gerando jogo: padrão=${padraoEscolhido}, distribuição=${tipoDistribuicao}`);
+            
+            // **DISTRIBUIÇÃO MANUAL: Seguir o PADRÃO de dígitos, mas usar números DIFERENTES a cada jogo**
+            if (tipoDistribuicao === 'manual') {
+                return gerarJogoSeguindoPadraoDigitos(padraoEscolhido, numerosPorJogo);
+            }
+            
+            // **OUTRAS DISTRIBUIÇÕES: Lógica baseada em números disponíveis + padrão**
             const numerospadrao = padraoEscolhido.split(',').map(n => parseInt(n));
-            
-            // Filtrar números do padrão que estão disponíveis
             const numerosDisponivelsPadrao = numerospadrao.filter(n => numerosDisponiveis.includes(n));
-            
-            // Se não temos números suficientes do padrão, completar com números aleatórios disponíveis
             let jogoFinal = [...numerosDisponivelsPadrao];
             
             while (jogoFinal.length < numerosPorJogo && jogoFinal.length < numerosDisponiveis.length) {
@@ -3157,6 +3247,78 @@
             // Ordenar e formatar
             jogoFinal.sort((a, b) => a - b);
             return jogoFinal.map(n => n.toString().padStart(2, '0'));
+        }
+        
+        // ✅ **NOVA FUNÇÃO: GERAR JOGO SEGUINDO PADRÃO DE DÍGITOS**
+        function gerarJogoSeguindoPadraoDigitos(exemploNumerosStr, numerosPorJogo) {
+            // Extrair padrão de dígitos do exemplo
+            const numerosExemplo = exemploNumerosStr.split(',').map(n => parseInt(n));
+            const padrao = extrairPadraoDigitos(numerosExemplo);
+            
+            console.log(`🔍 Padrão extraído:`, padrao.contadores);
+            
+            // Gerar novo jogo seguindo o mesmo padrão
+            const jogoFinal = [];
+            const numerosUsados = new Set();
+            
+            // Para cada grupo de dígitos (0, 1, 2, 3), escolher números aleatórios
+            for (let digito = 0; digito <= 3; digito++) {
+                const quantidade = padrao.contadores[digito];
+                console.log(`🔢 Dígito ${digito}: precisa de ${quantidade} números`);
+                
+                if (quantidade > 0) {
+                    const numerosDoDigito = obterNumerosDisponiveis(digito, quantidade, numerosUsados);
+                    numerosDoDigito.forEach(n => {
+                        jogoFinal.push(n);
+                        numerosUsados.add(n);
+                    });
+                }
+            }
+            
+            // Completar com números aleatórios se necessário
+            while (jogoFinal.length < numerosPorJogo) {
+                const numerosRestantes = numerosDisponiveis.filter(n => !numerosUsados.has(n));
+                if (numerosRestantes.length > 0) {
+                    const numeroAleatorio = numerosRestantes[Math.floor(Math.random() * numerosRestantes.length)];
+                    jogoFinal.push(numeroAleatorio);
+                    numerosUsados.add(numeroAleatorio);
+                } else {
+                    break;
+                }
+            }
+            
+            console.log(`✅ Jogo final gerado:`, jogoFinal);
+            
+            // Ordenar e formatar
+            jogoFinal.sort((a, b) => a - b);
+            return jogoFinal.map(n => n.toString().padStart(2, '0'));
+        }
+        
+        // ✅ **FUNÇÃO AUXILIAR: OBTER NÚMEROS DISPONÍVEIS DE UM DÍGITO**
+        function obterNumerosDisponiveis(digito, quantidade, numerosUsados) {
+            // Definir faixa de números para cada dígito
+            const min = digito * 10 + (digito === 0 ? 1 : 0); // 01-09, 10-19, 20-29, 30-31
+            const max = digito === 3 ? 31 : (digito + 1) * 10 - 1;
+            
+            // Filtrar números disponíveis nesta faixa
+            const numerosDisponivelsFaixa = numerosDisponiveis.filter(n => 
+                n >= min && n <= max && !numerosUsados.has(n)
+            );
+            
+            console.log(`🎯 Dígito ${digito} (${min}-${max}): ${numerosDisponivelsFaixa.length} disponíveis`);
+            
+            // Selecionar aleatoriamente
+            const selecionados = [];
+            const numerosParaSortear = [...numerosDisponivelsFaixa];
+            
+            for (let i = 0; i < quantidade && numerosParaSortear.length > 0; i++) {
+                const indiceAleatorio = Math.floor(Math.random() * numerosParaSortear.length);
+                const numeroSelecionado = numerosParaSortear.splice(indiceAleatorio, 1)[0];
+                selecionados.push(numeroSelecionado);
+            }
+            
+            console.log(`✅ Selecionados para dígito ${digito}:`, selecionados);
+            return selecionados;
         }
         
         function exibirJogosPadroes() {

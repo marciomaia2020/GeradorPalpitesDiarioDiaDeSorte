@@ -10,3 +10,28 @@ CALCULE os padrões mais comuns baseado nos dados reais
 POPULE dinamicamente os checkboxes (crescente E sorteio)
 ZERO dados estáticos - só dados reais ou localStorage
 
+Para distribuição Manual, deve usar EXATAMENTE os números do exemplo, independente se estão na lista de disponíveis.
+
+
+
+
+05 07 14 15 21 23 28 Jan
+05 08 15 16 21 23 28 Jan
+05 09 16 17 21 23 28 Jan
+07 08 17 18 21 23 28 Jan
+07 09 14 15 21 23 28 Jan
+08 09 15 16 21 23 28 Jan
+07 08 17 18 21 23 27 Jan
+07 08 14 15 21 23 27 Jan 
+05 08 15 17 21 23 28 Jan
+05 08 09 15 17 21 23 Jan
+05 08 14 19 21 24 27 Jan
+05 08 18 19 23 27 28 Jan
+07 08 18 19 23 24 27 Jan
+07 08 14 17 21 22 27 Jan
+07 09 18 19 23 27 29 Jan
+07 09 16 17 24 27 28 Jan
+08 09 14 19 21 27 28 Jan
+05 08 13 14 24 27 28 Jan
+05 08 14 19 21 23 27 Jan
+08 09 14 16 21 24 27 Jan
